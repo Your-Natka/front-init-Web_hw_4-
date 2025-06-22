@@ -9,7 +9,7 @@ from urllib.parse import parse_qs
 # === Константи ===
 HOST = 'localhost'
 HTTP_PORT = 3000
-SOCKET_PORT = 5000
+SOCKET_PORT = 6000
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STORAGE_DIR = os.path.join(BASE_DIR, 'storage')
 DATA_FILE = os.path.join(STORAGE_DIR, 'data.json')
@@ -17,11 +17,6 @@ DATA_FILE = os.path.join(STORAGE_DIR, 'data.json')
 
 # === UDP Socket Server ===
 def start_socket_server():
-    os.makedirs(STORAGE_DIR, exist_ok=True)
-    if not os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'w') as f:
-            json.dump({}, f)
-
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((HOST, SOCKET_PORT))
     print(f"[UDP] Socket server running on port {SOCKET_PORT}...")
@@ -36,6 +31,7 @@ def start_socket_server():
                 all_data[timestamp] = message
                 f.seek(0)
                 json.dump(all_data, f, indent=2)
+                f.truncate()
         except Exception as e:
             print(f"[UDP] Error: {e}")
 
@@ -95,15 +91,19 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b'404 Not Found')
 
-
-# === Запуск ===
 def start_http_server():
     server = HTTPServer((HOST, HTTP_PORT), SimpleHTTPRequestHandler)
     print(f"[HTTP] Server running on http://{HOST}:{HTTP_PORT}")
     server.serve_forever()
 
-
+# === Запуск ===
 if __name__ == '__main__':
+    # Перевірка наявності папки і файлу перед стартом серверів
+    os.makedirs(STORAGE_DIR, exist_ok=True)
+    if not os.path.exists(DATA_FILE):
+        with open(DATA_FILE, 'w') as f:
+            json.dump({}, f)
+
     t1 = threading.Thread(target=start_http_server)
     t2 = threading.Thread(target=start_socket_server)
 
